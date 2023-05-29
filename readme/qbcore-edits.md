@@ -1,8 +1,4 @@
-----------------------------------
---<!>-- BOII | DEVELOPMENT --<!>--
-----------------------------------
-
-### QB-CORE EDITS
+# QB-CORE EDITS
 
 In order to ensure new characters are added into the skills tables you can add the following export into your `qb-core/server/player.lua`
 
