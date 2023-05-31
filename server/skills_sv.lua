@@ -7,8 +7,18 @@ local function add_new_player(data)
     local identifier
     if framework == 'boii' then
         identifier = {first_name = data.first_name, last_name = data.last_name}
+
     elseif framework == 'qb' then
         identifier = {citizenid = data.citizenid}
+
+    elseif framework == 'esx' then
+        identifier = {identifier = data.identifier}
+
+    elseif framework == 'ox' then
+        -- to do ..
+
+    elseif framework == 'custom' then
+        -- add code for your own framework here
     end
     local table_names = {
         'characters_base_skills',
@@ -17,13 +27,26 @@ local function add_new_player(data)
     }
     for i, table_name in ipairs(table_names) do
         local result
+
         if framework == 'boii' then
             local query = 'SELECT * FROM ' .. table_name .. ' WHERE first_name = ? AND last_name = ?'
             result = MySQL.Sync.fetchAll(query, {identifier.first_name, identifier.last_name})
+
         elseif framework == 'qb' then
             local query = 'SELECT * FROM ' .. table_name .. ' WHERE citizenid = ?'
             result = MySQL.Sync.fetchAll(query, {identifier.citizenid})
+
+        elseif framework == 'esx' then
+            local query = 'SELECT * FROM ' .. table_name .. ' WHERE identifier = ?'
+            result = MySQL.Sync.fetchAll(query, {identifier.identifier})
+
+        elseif framework == 'ox' then
+            -- to do..
+
+        elseif framework == 'custom' then
+            -- add code for your own framework here
         end
+
         if #result == 0 then
             local query = 'INSERT INTO ' .. table_name .. ' SET ?'
             MySQL.Async.execute(query, {identifier})
@@ -33,10 +56,12 @@ end
 
 -- Function to import existing players
 local function import_players()
+
     if framework == 'boii' then
-        -- ...
+        -- probably wont be used due to skills being included as core..
         return
     end
+
     if framework == 'qb' then
         local query = 'SELECT citizenid FROM players'
         local result = MySQL.Sync.fetchAll(query, {})
@@ -51,10 +76,32 @@ local function import_players()
         end
         return
     end
-    if framework == 'custom' then
-        -- ...
+
+    if framework == 'esx' then
+        local query = 'SELECT identifier FROM users'
+        local result = MySQL.Sync.fetchAll(query, {})
+        for i=1, #result do
+            local identifier = result[i].identifier
+            local base_skills = 'INSERT INTO characters_base_skills (identifier) VALUES (?)'
+            local civ_skills = 'INSERT INTO characters_civ_skills (identifier) VALUES (?)'
+            local crim_skills = 'INSERT INTO characters_crim_skills (identifier) VALUES (?)'
+            MySQL.Async.execute(base_skills, {identifier})
+            MySQL.Async.execute(civ_skills, {identifier})
+            MySQL.Async.execute(crim_skills, {identifier})
+        end
         return
     end
+
+    if framework == 'ox' then
+        -- to do ..
+        return
+    end
+
+    if framework == 'custom' then
+        -- to do ..
+        return
+    end
+
 end
 
 -- Function to get table name from skill_type
@@ -82,6 +129,8 @@ local function get_skills(data)
         crim_skills = 'characters_crim_skills'
     }
     local function get_skill_data(table_name)
+        
+        -- boii_base
         if framework == 'boii' then
             local query = 'SELECT * FROM ' .. table_name .. ' WHERE first_name = ? AND last_name = ?'
             local result = MySQL.query.await(query, {data.first_name, data.last_name})
@@ -91,6 +140,8 @@ local function get_skills(data)
                 return {}
             end
         end
+
+        -- qb-core
         if framework == 'qb' then
             local query = 'SELECT * FROM ' .. table_name .. ' WHERE citizenid = ?'
             local result = MySQL.query.await(query, {data.citizenid})
@@ -100,6 +151,28 @@ local function get_skills(data)
                 return {}
             end
         end
+
+        -- esx legacy
+        if framework == 'esx' then
+            local query = 'SELECT * FROM ' .. table_name .. ' WHERE identifier = ?'
+            local result = MySQL.query.await(query, {data.identifier})
+            if result and #result > 0 then
+                return result[1]
+            else
+                return {}
+            end
+        end
+
+        -- ox_core
+        if framework == 'ox' then
+            -- to do ..
+        end
+
+        -- custom
+        if framework == 'custom' then
+            -- add code for your own framework here
+        end
+
     end
     local base_skills = get_skill_data(data_map.base_skills)
     local civ_skills = get_skill_data(data_map.civ_skills)
@@ -110,12 +183,38 @@ end
 -- Function to save skills to database
 local function save_skills_to_database(identifier, skill_type, skill_name, new_skill_data)
     local table_name = get_table_name(skill_type)
+
+    -- boii_base
     if framework == 'boii' then
         local query = 'UPDATE ' .. table_name .. ' SET ' .. skill_name .. ' = ? WHERE first_name = ? AND last_name = ?'
         MySQL.Async.execute(query, {new_skill_data, identifier.first_name, identifier.last_name})
-    elseif framework == 'qb' then
+        return
+    end
+    
+    -- qb-core
+    if framework == 'qb' then
         local query = 'UPDATE ' .. table_name .. ' SET ' .. skill_name .. ' = ? WHERE citizenid = ?'
         MySQL.Async.execute(query, {new_skill_data, identifier.citizenid})
+        return
+    end
+
+    -- esx legacy
+    if framework == 'esx' then
+        local query = 'UPDATE ' .. table_name .. ' SET ' .. skill_name .. ' = ? WHERE identifier = ?'
+        MySQL.Async.execute(query, {new_skill_data, identifier.identifier})
+        return
+    end
+
+    -- esx legacy
+    if framework == 'ox' then
+        -- to do ..
+        return
+    end
+
+    -- custom
+    if framework == 'custom' then
+         -- add code for your own framework here
+        return
     end
 end
 
@@ -162,16 +261,19 @@ local function update_xp(identifier, skill_type, skill_name, action, xp_change)
 end
 
 
+--<!>-- framework settings --<!>--
+-- boii_base
 if framework == 'boii' then
+
     -- callbacks
     fw.util.create_server_callback('boii_skills:sv:callback_skills', function(source, cb)
         local player = fw.s_data.get_user(source)
         if not player then
-            TriggerClientEvent('chat:addMessage', source, {args = {'^1Error', 'Player not found.'}})
+            print('no player found')
             return
         end
         local identifier = {first_name = player.c_data.first_name, last_name = player.c_data.last_name}
-        local base_skills, civ_skills, crim_skills = exports['boii_skills']:get_skills(identifier)
+        local base_skills, civ_skills, crim_skills = get_skills(identifier)
         cb(base_skills, civ_skills, crim_skills)
     end)
     -- commands
@@ -185,16 +287,21 @@ if framework == 'boii' then
         add_skill(skill_table, skill_name)
     end)
 
-elseif framework == 'qb' then
+    return
+end
+
+-- qb-core
+if framework == 'qb' then
+
     -- callbacks
     fw.Functions.CreateCallback('boii_skills:sv:callback_skills', function(source, cb)
         local player = fw.Functions.GetPlayer(source)
         if not player then
-            TriggerClientEvent('chat:addMessage', source, {args = {'^1Error', 'Player not found.'}})
+            print('no player found')
             return
         end
         local identifier = {citizenid = player.PlayerData.citizenid}
-        local base_skills, civ_skills, crim_skills = exports['boii_skills']:get_skills(identifier)
+        local base_skills, civ_skills, crim_skills = get_skills(identifier)
         cb(base_skills, civ_skills, crim_skills)
     end)
 
@@ -209,6 +316,66 @@ elseif framework == 'qb' then
         add_skill(skill_table, skill_name)
     end, 'admin')
 
+    return
+end
+
+-- esx legacy
+if framework == 'esx' then
+    -- events
+    AddEventHandler('esx:playerLoaded', function(source) 
+        local player = fw.GetPlayerFromId(source)
+        if not player then
+            print('no player found')
+            return
+        end
+        local identifier = {identifier = player.identifier}
+        add_new_player(identifier)
+    end)
+
+    -- callbacks
+    fw.RegisterServerCallback('boii_skills:sv:callback_skills', function(source, cb)
+		local player = fw.GetPlayerFromId(source)
+        if not player then
+            print('no player found')
+            return
+        end
+        local identifier = {identifier = player.identifier}
+        local base_skills, civ_skills, crim_skills = get_skills(identifier)
+        cb(base_skills, civ_skills, crim_skills)
+	end)
+
+    -- commands
+    fw.RegisterCommand({'skills:import_players'}, 'admin', function(xPlayer, args, showError)
+        import_players()
+    end, true, {help = 'Import players into database skill tables'})
+
+    fw.RegisterCommand('skills:add_skill', 'admin', function(xPlayer, args, showError)
+        local skill_table = tostring(args[1]):lower()
+        local skill_name = tostring(args[2]):lower()
+        add_skill(skill_table, skill_name)
+    end, false, {help = 'Add a new skill to database skill tables', validate = true, arguments = {
+        {name = 'skill_table', help = 'options: base_skills, civ_skills, crim_skills', type = 'string'},
+        {name = 'skill_name', help = 'name of skill to add', type = 'string'}
+    }})
+
+    return
+end
+
+-- ox_core
+if framework == 'ox' then
+
+    -- to do..
+
+    return
+end
+
+
+-- custom
+if framework == 'custom' then
+
+    -- add code for your own framework here
+
+    return
 end
 
 -- Exports
