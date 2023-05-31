@@ -10,7 +10,7 @@ author 'CASE#1993'
 
 description 'BOII | Development - Utility: Skill System*(W.I.P)*'
 
-version '0.0.1'
+version '0.0.2'
 
 lua54 'yes'
 
