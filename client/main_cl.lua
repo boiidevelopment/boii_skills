@@ -9,9 +9,9 @@ if framework == 'boii' then
 elseif framework == 'qb' then
     fw = exports['qb-core']:GetCoreObject()
 elseif framework == 'esx' then
-    -- to do ...
+    fw = exports['es_extended']:getSharedObject()
 elseif framework == 'ox' then    
     -- to do...
 elseif framework == 'custom' then
-    -- to do...
+    -- add code for your own framework here
 end
