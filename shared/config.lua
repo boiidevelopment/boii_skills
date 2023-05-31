@@ -5,11 +5,11 @@
 config = config or {}
 
 -- framework settings
-config.framework = 'qb' -- options; boii, qb
+config.framework = 'qb' -- options; boii, qb, esx
 
 -- resource settings
 config.resource_settings = {
-    menu = 'qb-menu', -- options; boii_ui, qb-menu
+    menu = 'qb-menu', -- options; boii_ui, qb-menu, esx_context
 }
 
 -- skill settings
