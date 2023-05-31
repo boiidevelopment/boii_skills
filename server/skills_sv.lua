@@ -292,6 +292,16 @@ end
 
 -- qb-core
 if framework == 'qb' then
+    -- events
+    AddEventHandler('QBCore:Server:PlayerLoaded', function(source)
+        local player = fw.Functions.GetPlayer(source)
+        if not player then
+            print('no player found')
+            return
+        end
+        local identifier = {citizenid = player.PlayerData.citizenid}
+        add_new_player(identifier)
+    end)
 
     -- callbacks
     fw.Functions.CreateCallback('boii_skills:sv:callback_skills', function(source, cb)
